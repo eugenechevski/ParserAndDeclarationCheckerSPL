@@ -1,4 +1,4 @@
- /* $Id: bison_spl_y_top.y,v 1.2 2024/10/09 18:18:55 leavens Exp $ */
+ /* $Id: bison_spl_y_top.y,v 1.3 2024/10/31 19:24:47 leavens Exp leavens $ */
 
 %code top {
 #include <stdio.h>
@@ -116,15 +116,20 @@ block_t progast;
 extern void setProgAST(block_t t);
 }
 
+
+ /* Write your grammar rules below and before the next %% */
+ 
 %%
 
-program : block periodsym { setProgAST($1); } ;
+program : block "." { setProgAST($1); } 
+        ;
 
-block : beginsym constDecls varDecls procDecls stmts endsym
-        { $$ = ast_block($1, $2, $3, $4, $5); }
+block : "begin" constDecls varDecls procDecls stmts "end"
+{ $$ = ast_block($1, $2, $3, $4, $5); }
         ;
 
 constDecls : constDecls constDecl { $$ = ast_const_decls($1, $2); }
+           | empty { $$ = ast_const_decls_empty($1); }
            ;
 
 constDecl : constsym constDefList { $$ = ast_const_decl($2); }
@@ -141,7 +146,7 @@ varDecls : varDecls varDecl { $$ = ast_var_decls($1, $2); }
          | empty { $$ = ast_var_decls_empty($1); }
          ;
         
-varDecl : varsym identList { $$ = ast_var_decl($2); }
+varDecl : varsym identList semisym { $$ = ast_var_decl($2); }
         ; 
 
 identList : identsym { $$ = ast_ident_list_singleton($1); }
@@ -149,13 +154,19 @@ identList : identsym { $$ = ast_ident_list_singleton($1); }
         ;
 
 procDecls : procDecls procDecl { $$ = ast_proc_decls($1, $2); }
+       | empty { $$ = ast_proc_decls_empty($1); } 
+       ;
 
-procDecl : procsym identsym block { $$ = ast_proc_decl($2, $3); }
+procDecl : procsym identsym block ";" { $$ = ast_proc_decl($2, $3); };
 
-stmts : empty { $$ = ast_stmts_empty($1); }
+stmts : empty { $$ = ast_stmts_empty($1); } 
       | stmtList { $$ = ast_stmts($1); }
       ;
-
+empty : %empty { file_location *file_loc
+	     = file_location_make(lexer_filename(), lexer_line());
+          $$ = ast_empty(file_loc);
+	  }
+      ;
 stmtList : stmt { $$ = ast_stmt_list_singleton($1); }
           | stmtList semisym stmt { $$ = ast_stmt_list($1, $3); }
           ;
@@ -201,30 +212,24 @@ relOp : eqeqsym
       | geqsym
       ;
 
-expr : term | expr plussym term { $$ = ast_binary_op_expr($1, $2, $3); }
-     | expr minussym term { $$ = ast_binary_op_expr($1, $2, $3); }
+expr : term | expr plussym term { $$ = ast_expr_binary_op( ast_binary_op_expr($1, $2, $3)); }
+     | expr minussym term { $$ =  ast_expr_binary_op(ast_binary_op_expr($1, $2, $3)); }
      ;
 
-term : factor | term multsym factor { $$ = ast_binary_op_expr($1, $2, $3); } 
-     | term divsym factor { $$ = ast_binary_op_expr($1, $2, $3); }
+term : factor | term multsym factor { $$ = ast_expr_binary_op(ast_binary_op_expr($1, $2, $3)); } 
+     | term divsym factor { $$ = ast_expr_binary_op(ast_binary_op_expr($1, $2, $3)); }
      ;
 
 factor : identsym { $$ = ast_expr_ident($1); }
        | numbersym { $$ = ast_expr_number($1); }
        | sign factor { $$ = ast_expr_signed_expr($1, $2); }
-       | lparensym expr  { $$ = $2; }
+       | lparensym expr rparensym { $$ = $2; }
        ;
+sign : plussym | minussym
+ ;
 
-sign : plussym | minussym ;
-
-empty : %empty
-        { file_location *file_loc
-	     = file_location_make(lexer_filename(), lexer_line());
-          $$ = ast_empty(file_loc);
-	  }
-      ;
+/*aqui estaba empty*/
 %%
 
 // Set the program's ast to be ast
 void setProgAST(block_t ast) { progast = ast; }
-

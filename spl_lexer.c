@@ -2215,4 +2215,3 @@ enum yytokentype returnPsymbol(const char *punctuation)
         }
   return periodsym;
 }
-
