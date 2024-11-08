@@ -118,12 +118,161 @@ extern void setProgAST(block_t t);
 
 %%
  /* Write your grammar rules below and before the next %% */
+/* Write your grammar rules below and before the next %% */
+program
+    : block periodsym
+    { setProgAST($1); }
+    ;
 
+block
+    : beginsym constDecls varDecls procDecls stmts endsym
+    ;
+
+constDecls
+    : /* empty */
+    | constDecl constDecls
+    ;
+
+constDecl
+    : constsym constDefList semisym
+    ;
+
+constDefList
+    : constDef
+    | constDefList commasym constDef
+    ;
+
+constDef
+    : identsym eqsym numbersym
+    ;
+
+varDecls
+    : /* empty */
+    | varDecl varDecls
+    ;
+
+varDecl
+    : varsym identList semisym
+    ;
+
+identList
+    : identsym
+    | identList commasym identsym
+    ;
+
+procDecls
+    : /* empty */
+    | procDecl procDecls
+    ;
+
+procDecl
+    : procsym identsym block semisym
+    ;
+
+stmts
+    : empty
+    | stmtList
+    ;
+
+empty
+    : /* empty */
+    ;
+
+stmtList
+    : stmt
+    | stmtList semisym stmt
+    ;
+
+stmt
+    : assignStmt
+    | callStmt
+    | ifStmt
+    | whileStmt
+    | readStmt
+    | printStmt
+    | blockStmt
+    ;
+
+assignStmt
+    : identsym becomessym expr
+    ;
+
+callStmt
+    : callsym identsym
+    ;
+
+ifStmt
+    : ifsym condition thensym stmts elsesym stmts endsym
+    | ifsym condition thensym stmts endsym
+    ;
+
+whileStmt
+    : whilesym condition dosym stmts endsym
+    ;
+
+readStmt
+    : readsym identsym
+    ;
+
+printStmt
+    : printsym expr
+    ;
+
+blockStmt
+    : block
+    ;
+
+condition
+    : dbCondition
+    | relOpCondition
+    ;
+
+dbCondition
+    : divisiblesym expr bysym expr
+    ;
+
+relOpCondition
+    : expr relOp expr
+    ;
+
+relOp
+    : eqeqsym
+    | neqsym
+    | ltsym
+    | leqsym
+    | gtsym
+    | geqsym
+    ;
+
+expr
+    : term
+    | expr plussym term
+    | expr minussym term
+    ;
+
+term
+    : factor
+    | term multsym factor
+    | term divsym factor
+    ;
+
+factor
+    : identsym
+    | numbersym
+    | sign factor
+    | lparensym expr rparensym
+    ;
+
+sign
+    : plussym
+    | minussym
+    ;
 
 
 
 
 %%
+
 
 // Set the program's ast to be ast
 void setProgAST(block_t ast) { progast = ast; }
