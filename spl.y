@@ -125,14 +125,13 @@ block : beginsym constDecls varDecls procDecls stmts endsym
         ;
 
 constDecls : constDecls constDecl { $$ = ast_const_decls($1, $2); }
-           | empty { $$ = ast_const_decls_empty($1); }
            ;
 
 constDecl : constsym constDefList { $$ = ast_const_decl($2); }
           ;
 
 constDefList : constDef { $$ = ast_const_def_list_singleton($1); } 
-         | constDefList commasym constDef { $$ = ast_const_def_lis($1,  $3); }
+         | constDefList commasym constDef { $$ = ast_const_def_list($1,  $3); }
          ;
 
 constDef : identsym eqsym numbersym { $$ = ast_const_def($1, $3); }
