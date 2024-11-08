@@ -154,7 +154,8 @@ identList : identsym { $$ = ast_ident_list_singleton($1); }
         ;
 
 procDecls : procDecls procDecl { $$ = ast_proc_decls($1, $2); }
-       | empty { ast_proc_decls_empty($1); } ;
+       | empty { $$ = ast_proc_decls_empty($1); } 
+       ;
 
 procDecl : procsym identsym block ";" { $$ = ast_proc_decl($2, $3); };
 
