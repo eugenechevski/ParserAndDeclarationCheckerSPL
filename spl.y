@@ -132,7 +132,7 @@ constDecls : constDecls constDecl { $$ = ast_const_decls($1, $2); }
            | empty { $$ = ast_const_decls_empty($1); }
            ;
 
-constDecl : constsym constDefList { $$ = ast_const_decl($2); }
+constDecl : constsym constDefList semisym { $$ = ast_const_decl($2); }
           ;
 
 constDefList : constDef { $$ = ast_const_def_list_singleton($1); } 
