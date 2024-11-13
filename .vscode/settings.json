@@ -58,6 +58,9 @@
   "C_Cpp_Runner.msvcSecureNoWarnings": false,
   "files.associations": {
     "unparser.h": "c",
-    "utilities.h": "c"
+    "utilities.h": "c",
+    "ast.h": "c",
+    "scope_check.h": "c",
+    "id_use.h": "c"
   }
 }

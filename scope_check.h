@@ -25,7 +25,7 @@ extern void scope_check_varDecl(var_decl_t vd);
 // Add declarations for the names in ids to the current scope's symbol table,
 // for variables of the type t,
 // producing errors for any duplicate declarations
-extern void scope_check_idents(ident_list_t ids, AST_type t);
+extern void scope_check_idents(ident_list_t ids, AST_type t, id_kind kind);
 
 // check the statements to make sure that
 // all idenfifiers referenced in them have been declared
@@ -44,7 +44,7 @@ extern void scope_check_binary_op_expr(binary_op_expr_t exp);
 // Add a declaration of the name id.name with the type t
 // to the current scope's symbol table,
 // producing an error if this would be a duplicate declaration
-extern void scope_check_declare_ident(ident_t id, AST_type vt);
+extern void scope_check_declare_ident(ident_t id, AST_type vt, id_kind kind);
 
 // check the statement to make sure that
 // all idenfifiers referenced in it have been declared

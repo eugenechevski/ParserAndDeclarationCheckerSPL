@@ -17,9 +17,45 @@
 void scope_check_program(block_t prog)
 {
     symtab_enter_scope();
+    scope_check_constDecls(prog.const_decls);
     scope_check_varDecls(prog.var_decls);
+    scope_check_procDecls(prog.proc_decls);
     scope_check_stmts(prog.stmts);
     symtab_leave_scope();
+}
+
+// declare all procedure identifiers
+void scope_check_procDecls(proc_decls_t pds)
+{
+    proc_decl_t *pdp = pds.proc_decls;
+    while (pdp != NULL)
+    {
+        scope_check_procDecl(*pdp);
+        pdp = pdp->next;
+    }
+}
+
+void scope_check_procDecl(proc_decl_t pd)
+{
+    // check if the procedure name is already declared
+    if (symtab_declared_in_current_scope(pd.name))
+    {
+        bail_with_prog_error(
+            *(pd.file_loc),
+            "procedure \"%s\" is already declared",
+            pd.name);
+        exit(EXIT_FAILURE);
+    }
+    else
+    {
+        // declare the name of the procedure
+        int ofst_cnt = symtab_scope_loc_count();
+        id_attrs *attrs = create_id_attrs(*(pd.file_loc), pd.type_tag, ofst_cnt);
+        symtab_insert(pd.name, attrs);
+    }
+    
+    // check the block of the procedure
+    scope_check_program(*(pd.block));
 }
 
 // check that all identifiers used in exp
@@ -31,6 +67,33 @@ void scope_check_binary_op_expr(binary_op_expr_t exp)
     scope_check_expr(*(exp.expr1));
     // (note: no identifiers can occur in the operator)
     scope_check_expr(*(exp.expr2));
+}
+
+// declare all constant identifiers
+void scope_check_constDecls(const_decls_t cds)
+{
+    const_decl_t *cdp = cds.start;
+    while (cdp != NULL)
+    {
+        scope_check_constDecl(*cdp);
+        cdp = cdp->next;
+    }
+}
+
+void scope_check_constDecl(const_decl_t cd)
+{
+    const_def_list_t cdl = cd.const_def_list;
+    const_def_t *cdp = cdl.start;
+    while (cdp != NULL)
+    {
+        scope_check_constDef(*cdp);
+        cdp = cdp->next;
+    }
+}
+
+void scope_check_constDef(const_def_t cd)
+{
+    scope_check_declare_ident(cd.ident, cd.type_tag, constant_idk);
 }
 
 // build the symbol table
@@ -49,18 +112,18 @@ void scope_check_varDecls(var_decls_t vds)
 // reporting duplicate declarations
 void scope_check_varDecl(var_decl_t vd)
 {
-    scope_check_idents(vd.ident_list, vd.type_tag);
+    scope_check_idents(vd.ident_list, vd.type_tag, variable_idk);
 }
 
 // Add declarations for the names in ids
 // to current scope as type vt
 // reporting any duplicate declarations
-void scope_check_idents(ident_list_t ids, AST_type vt)
+void scope_check_idents(ident_list_t ids, AST_type vt, id_kind kind)
 {
     ident_t *idp = ids.start;
     while (idp != NULL)
     {
-        scope_check_declare_ident(*idp, vt);
+        scope_check_declare_ident(*idp, vt, kind);
         idp = idp->next;
     }
 }
@@ -68,16 +131,26 @@ void scope_check_idents(ident_list_t ids, AST_type vt)
 // Add declaration for id
 // to current scope as type vt
 // reporting if it's a duplicate declaration
-void scope_check_declare_ident(ident_t id, AST_type vt)
+void scope_check_declare_ident(ident_t id, AST_type vt, id_kind kind)
 {
     if (symtab_declared_in_current_scope(id.name))
     {
-        // only variables in FLOAT
+        // Get existing identifier's kind
+        id_kind existing_kind = symtab_lookup(id.name)->attrs->kind;
+        
+        const char *existing_kind_str = (existing_kind == 6) ? "variable" :
+                                        (existing_kind == 4) ? "constant" :
+                                        "procedure";
+
+        const char *new_kind_str = (kind == variable_idk) ? "variable" :
+                                   (kind == constant_idk) ? "constant" : "procedure";
+
         bail_with_prog_error(
             *(id.file_loc),
-            "variable \"%s\" is already declared as a variable",
-            // Assuming `file_loc` has `line` attribute
-            id.name);
+            "%s \"%s\" is already declared as a %s",
+            new_kind_str,
+            id.name,
+            existing_kind_str);
         exit(EXIT_FAILURE);
     }
     else
@@ -116,32 +189,24 @@ void scope_check_stmt(stmt_t stmt)
     switch (stmt.stmt_kind)
     {
     case assign_stmt:
-        // fprintf(stderr, "I am here 1");
-
         scope_check_assignStmt(stmt.data.assign_stmt); //
         break;
     case call_stmt:
-        // fprintf(stderr, "I am here 2");
         scope_check_callStmt(stmt.data.call_stmt); //
         break;
     case while_stmt:
-        fprintf(stderr, "I am here 3");
         scope_check_whileStmt(stmt.data.while_stmt); //
         break;
     case if_stmt:
-        fprintf(stderr, "I am here 4");
         scope_check_ifStmt(stmt.data.if_stmt); //
         break;
     case read_stmt:
-        fprintf(stderr, "I am here 5");
         scope_check_readStmt(stmt.data.read_stmt); //
         break;
     case print_stmt:
-        // fprintf(stderr, "I am here 6");
         scope_check_printStmt(stmt.data.print_stmt); //
         break;
     case block_stmt:
-        fprintf(stderr, "I am here 7");
         scope_check_blockStmt(stmt.data.block_stmt);
         break;
     default:
@@ -217,12 +282,12 @@ void scope_check_ifStmt(if_stmt_t stmt)
     }
 
     // Check the statement list S1 for identifiers
-    scope_Check_stmts(stmt.then_stmts);
+    scope_check_stmts(*stmt.then_stmts);
 
     // Check the else part S2 if it exists
     if (stmt.else_stmts != NULL)
     {
-        scope_Check_stmts(stmt.else_stmts);
+        scope_check_stmts(*stmt.else_stmts);
     }
 }
 
@@ -283,7 +348,7 @@ id_use *scope_check_ident_declared(file_location floc, const char *name)
                              "identifier \"%s\" is not declared!",
                              name);
     }
-    assert(id_use_get_attrs(ret) != NULL);
+    // assert(id_use_get_attrs(ret) != NULL);
     return ret;
 }
 
